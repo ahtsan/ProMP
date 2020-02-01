@@ -135,6 +135,9 @@ class SampleProcessor(object):
         return samples_data, paths
 
     def _log_path_stats(self, paths, log=False, log_prefix=''):
+        if 'success' in paths[0]['env_infos']:
+            successes = [path['env_infos']['success'].any() for path in paths]
+            logger.logkv(log_prefix + 'SuccessRate', np.mean(successes))
         # compute log stats
         average_discounted_return = np.mean([path["returns"][0] for path in paths])
         undiscounted_returns = [sum(path["rewards"]) for path in paths]
