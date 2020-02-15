@@ -200,14 +200,15 @@ class GaussianRNNPolicy(Policy):
     def reset(self, dones=None):
         sess = tf.get_default_session()
         _hidden_state = sess.run(self._zero_hidden)
-        if self._hidden_state is None:
-            self._hidden_state = sess.run(self.cell.zero_state(len(dones), tf.float32))
-        else:
-            if isinstance(self._hidden_state, tf.contrib.rnn.LSTMStateTuple):
-                self._hidden_state.c[dones] = _hidden_state.c
-                self._hidden_state.h[dones] = _hidden_state.h
-            else:
-                self._hidden_state[dones] = _hidden_state
+        self._hidden_state = np.tile(_hidden_state, (len(dones), 1))
+        # if self._hidden_state is None:
+        #     self._hidden_state = sess.run(self.cell.zero_state(len(dones), tf.float32))
+        # else:
+        #     if isinstance(self._hidden_state, tf.contrib.rnn.LSTMStateTuple):
+        #         self._hidden_state.c[dones] = _hidden_state.c
+        #         self._hidden_state.h[dones] = _hidden_state.h
+        #     else:
+        #         self._hidden_state[dones] = _hidden_state
 
     def get_zero_state(self, batch_size):
         sess = tf.get_default_session()

@@ -2,6 +2,7 @@ import tensorflow as tf
 import numpy as np
 import time
 from maml_zoo.logger import logger
+from maml_zoo.utils import utils
 
 
 class Trainer(object):
@@ -25,6 +26,7 @@ class Trainer(object):
             algo,
             env,
             sampler,
+            test_sampler,
             sample_processor,
             policy,
             n_itr,
@@ -35,6 +37,7 @@ class Trainer(object):
         self.algo = algo
         self.env = env
         self.sampler = sampler
+        self.test_sampler = test_sampler
         self.sample_processor = sample_processor
         self.baseline = sample_processor.baseline
         self.policy = policy
@@ -105,6 +108,8 @@ class Trainer(object):
                 logger.logkv('Time', time.time() - start_time)
                 logger.logkv('ItrTime', time.time() - itr_start_time)
 
+                self._meta_test()
+
                 logger.log("Saving snapshot...")
                 params = self.get_itr_snapshot(itr)
                 logger.save_itr_params(itr, params)
@@ -116,6 +121,25 @@ class Trainer(object):
 
         logger.log("Training finished")
         self.sess.close()
+
+    def _meta_test(self):
+        test_task = self.env.sample_tasks(self.test_sampler.meta_batch_size)
+        self.test_sampler.set_tasks(test_task)
+        logger.log("\n ---------------- Meta-test adaptation stage --------------------")
+        logger.log("Sampling set of tasks/goals for meta-test...")
+        self.test_sampler.obtain_samples(self.test_sampler.batch_size, for_adapt=True)
+        hidden_after_adaptation = self.policy._hidden_state[:]
+        logger.log("\n ---------------- Meta-test testing stage --------------------")
+        logger.log("Sampling set of tasks/goals for meta-test...")
+        all_test_paths = []
+        for _ in range(self.test_sampler.batch_size):
+            test_paths = self.test_sampler.obtain_samples(1, for_adapt=False,
+                initial_hidden=hidden_after_adaptation)
+            # calculate returns
+            for path in test_paths:
+                path["returns"] = utils.discount_cumsum(path["rewards"], self.sample_processor.discount)
+            all_test_paths.extend(test_paths)
+        self.sample_processor._log_path_stats(all_test_paths, log='all', log_prefix='test-')
 
     def get_itr_snapshot(self, itr):
         """

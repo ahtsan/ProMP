@@ -140,7 +140,7 @@ class MAMLParallelEnvExecutor(object):
         results = [remote.recv() for remote in self.remotes]
 
         obs, rewards, dones, env_infos = map(lambda x: sum(x, []), zip(*results))
-
+        import pdb; pdb.set_trace
         return obs, rewards, dones, env_infos
 
     def reset(self):
