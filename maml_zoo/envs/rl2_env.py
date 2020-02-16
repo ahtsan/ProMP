@@ -41,10 +41,13 @@ class RL2Env(Serializable):
                  obs_alpha=0.001,
                  reward_alpha=0.001,
                  normalization_scale=10.,
+                 random_init=None
                  ):
         Serializable.quick_init(self, locals())
 
         self._wrapped_env = env
+        if random_init is not None:
+            self._wrapped_env.active_env.random_init = random_init
 
     def __getattr__(self, attr):
         """
